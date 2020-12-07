@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const User = require('../models/users');
 const passport = require('passport');
 const authenticate = require('../authenticated');
+const cors = require('./cors');
 
 const router = express.Router();
 router.use(bodyParser.json());
@@ -10,6 +11,7 @@ router.use(bodyParser.json());
 /* GET users listing. */
 router.get(
   '/',
+  cors.corsWithOptions,
   authenticate.verifyUser,
   authenticate.verifyAdmin,
   (req, res, next) => {
@@ -26,7 +28,7 @@ router.get(
   },
 );
 
-router.post('/signup', function (req, res, next) {
+router.post('/signup', cors.corsWithOptions, function (req, res, next) {
   User.register(
     new User({
       username: req.body.username,
@@ -60,17 +62,22 @@ router.post('/signup', function (req, res, next) {
   );
 });
 
-router.post('/login', passport.authenticate('local'), (req, res) => {
-  const token = authenticate.getToken({ _id: req.user._id });
+router.post(
+  '/login',
+  cors.corsWithOptions,
+  passport.authenticate('local'),
+  (req, res) => {
+    const token = authenticate.getToken({ _id: req.user._id });
 
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'application/json');
-  res.json({
-    success: true,
-    token: token,
-    status: 'You are succesfully logged in',
-  });
-});
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/json');
+    res.json({
+      success: true,
+      token: token,
+      status: 'You are succesfully logged in',
+    });
+  },
+);
 
 router.get('/logout', (req, res) => {
   if (req.session) {
@@ -83,5 +90,22 @@ router.get('/logout', (req, res) => {
     next(err);
   }
 });
+
+router.get(
+  '/facebook/token',
+  passport.authenticate('facebook-token'),
+  (req, res) => {
+    if (req.user) {
+      const token = authenticate.getToken({ _id: req.user._id });
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json');
+      res.json({
+        success: true,
+        token: token,
+        status: 'You are succesfully logged in',
+      });
+    }
+  },
+);
 
 module.exports = router;
